@@ -2,11 +2,36 @@ const fs = require('fs')
 const path = require('path');
 
 class LaravelMixFilenameVersioning {
+  constructor(options) {
+    this.options = options;
+  }
+
+  shouldExclude(assetName) {
+    const exclude = this.options.exclude !== 'undefined' ? this.options.exclude : [];
+
+    for (var i = 0; i < exclude.length; i++) {
+      if (typeof exclude[i] === 'string' && assetName === exclude[i]) {
+        return true;
+      }
+
+      if (exclude[i] instanceof RegExp && assetName.match(exclude[i])) {
+        return true;
+      }
+    }
+  }
+
   apply (compiler) {
+    let $this = this;
+
     compiler.plugin('done', function(stats) {
       const newAssets = {};
 
       Object.keys(stats.compilation.assets).forEach(assetName => {
+        if ($this.shouldExclude(assetName)) {
+          newAssets[assetName] = stats.compilation.assets[assetName];
+          return;
+        }
+
         let originalAssetNameParts = path.parse(assetName);
         let newAssetFile = new File(path.join(Config.publicPath, assetName));
         let newAssetFileName = newAssetFile.segments.name + '.' + newAssetFile.version().substr(0, 8) + newAssetFile.segments.ext;
